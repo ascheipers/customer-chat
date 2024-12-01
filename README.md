@@ -102,3 +102,25 @@ Interactions:
 - Backend -> Frontend:
   - Real-time updates (via WebSockets or server-sent events) notify the frontend of new messages or state changes.
 
+
+### Requirements
+
+- Python 3.13
+- Node.js 22.11
+- poetry
+
+### Setup and how to run as dev
+
+Backend:
+```shell
+poetry install
+poetry shell
+python wsgi.py
+```
+
+Frontend:
+```shell
+cd frontend
+npm install
+npm run dev
+```
