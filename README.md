@@ -115,6 +115,9 @@ Backend:
 ```shell
 poetry install
 poetry shell
+
+flask --app customer_chat init-db
+flask --app customer_chat create-agent test@example.com 1234 Max
 python wsgi.py
 ```
 
