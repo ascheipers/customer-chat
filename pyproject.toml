@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "customer-chat"
+version = "0.1.0"
+description = ""
+authors = ["Andreas Scheipers <andreas.scheipers@uniberg.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+flask = "^3.1.0"
+flask-socketio = "^5.4.1"
+flask-jwt-extended = "^4.7.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
