@@ -53,8 +53,26 @@ def configure_routes(app):
         except Exception as e:
             return jsonify({'error': 'Failed to create chat', 'details': str(e)}), 500
 
+    @app.route('/chat/<chat_id>', methods=['GET'])
+    @jwt_required()
+    def get_chat_details(chat_id):
+        """
+        Retrieve chat details
+        """
+        db = get_db()
+
+        try:
+            chat = db.execute(
+                'SELECT * FROM chat WHERE id = ?',
+                (chat_id,)
+            ).fetchone()
+
+            return jsonify({ 'customer_name': chat['customer_name'] })
+        except Exception as e:
+            return jsonify({'error': 'Failed to retrieve messages', 'details': str(e)}), 500
+        
+
     @app.route('/chat/<chat_id>/messages', methods=['GET'])
-    @jwt_required()  # Requires JWT token
     def get_chat_messages(chat_id):
         """
         Retrieve messages for a specific chat
@@ -72,7 +90,7 @@ def configure_routes(app):
             return jsonify({'error': 'Failed to retrieve messages', 'details': str(e)}), 500
 
     @app.route('/chat/<chat_id>/assign', methods=['POST'])
-    @jwt_required()  # Requires JWT token
+    @jwt_required()
     def assign_agent_to_chat(chat_id):
         """
         Assign an agent to a pending chat
@@ -81,18 +99,27 @@ def configure_routes(app):
         db = get_db()
 
         try:
-            # Get agent ID
+            # Get agent details
             agent = db.execute(
-                'SELECT id FROM agent WHERE email = ?',
+                'SELECT id, email FROM agent WHERE email = ?',
                 (agent_email,)
             ).fetchone()
 
             if not agent:
                 return jsonify({'error': 'Agent not found'}), 404
 
+            # Check if chat is already assigned
+            existing_chat = db.execute(
+                'SELECT * FROM chat WHERE id = ? AND agent_id IS NOT NULL AND status != "pending"',
+                (chat_id,)
+            ).fetchone()
+
+            if existing_chat:
+                return jsonify({'error': 'Chat is already assigned or not in pending status'}), 400
+
             # Update chat with agent
             db.execute(
-                'UPDATE chat SET agent_id = ?, status = "active" WHERE id = ? AND status = "pending"',
+                'UPDATE chat SET agent_id = ?, status = "active" WHERE id = ? AND (status = "pending" OR agent_id IS NULL)',
                 (agent['id'], chat_id)
             )
 
@@ -106,8 +133,9 @@ def configure_routes(app):
         except Exception as e:
             return jsonify({'error': 'Failed to assign chat', 'details': str(e)}), 500
 
+
     @app.route('/chats', methods=['GET'])
-    @jwt_required()  # Requires JWT token
+    @jwt_required()
     def list_chats():
         """
         List chats for an agent (can filter by status)
@@ -140,3 +168,22 @@ def configure_routes(app):
             return jsonify([dict(chat) for chat in chats])
         except Exception as e:
             return jsonify({'error': 'Failed to retrieve chats', 'details': str(e)}), 500
+
+
+    @app.route('/chats/available', methods=['GET'])
+    @jwt_required()
+    def list_available_chats():
+        """
+        List available (pending) chats for agents
+        """
+        db = get_db()
+
+        try:
+            # Fetch all pending chats that are not yet assigned
+            chats = db.execute(
+                'SELECT * FROM chat WHERE status = "pending" AND agent_id IS NULL'
+            ).fetchall()
+
+            return jsonify([dict(chat) for chat in chats])
+        except Exception as e:
+            return jsonify({'error': 'Failed to retrieve available chats', 'details': str(e)}), 500
